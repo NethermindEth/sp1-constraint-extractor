@@ -1,0 +1,68 @@
+{
+    "editor.inlineSuggest.enabled": true,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true,
+        "editor.hover.enabled": true
+    },
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": false
+    },
+    "[h]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": false
+    },
+    "[cuda-cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": false
+    },
+    "editor.rulers": [
+        100
+    ],
+    "rust-analyzer.check.overrideCommand": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--message-format=json",
+        "--all-features",
+        "--all-targets",
+        "--",
+        "-A",
+        "incomplete-features"
+    ],
+    "rust-analyzer.linkedProjects": [
+        "Cargo.toml",
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "files.associations": {
+        "random": "cpp",
+        "chrono": "cpp",
+        "cstdint": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "limits": "cpp"
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/core/**/include",
+        "${workspaceFolder}/target/include",
+    ],
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "files.associations": {
+        "random": "cpp",
+        "chrono": "cpp",
+        "cstdint": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
+    },
+}
