@@ -7,6 +7,8 @@ pub mod symbolic_expr_f;
 pub mod symbolic_var_ef;
 pub mod symbolic_var_f;
 
+pub mod constraint_extraction;
+
 use std::sync::Mutex;
 
 use instruction::{Instruction16, Instruction32};
@@ -219,105 +221,41 @@ pub fn CUDA_P3_EVAL_RESET() {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::{create_dir_all, File};
+    use std::io::Write;
+    use std::path::Path;
 
-    use p3_air::{Air, BaseAir};
-    use p3_field::{AbstractField, PrimeField32};
-    use p3_matrix::dense::RowMajorMatrix;
-    use p3_matrix::Matrix;
-    use sp1_core_executor::ExecutionRecord;
-    use sp1_core_executor::Program;
-    use sp1_core_machine::{operations::AddOperation, riscv::RiscvAir, utils::setup_logger};
-    use sp1_derive::AlignedBorrow;
-    use sp1_stark::Chip;
+    use sp1_core_machine::{riscv::RiscvAir, utils::setup_logger};
     use sp1_stark::{air::MachineAir, baby_bear_poseidon2::BabyBearPoseidon2};
-    use sp1_stark::{air::SP1AirBuilder, Word};
-    use std::borrow::Borrow;
 
     use crate::codegen_cuda_eval;
-
-    #[derive(AlignedBorrow, Default, Clone, Copy)]
-    #[repr(C)]
-    struct AddCols<T> {
-        a: Word<T>,
-        b: Word<T>,
-        op: AddOperation<T>,
-    }
-
-    #[derive(Default)]
-    struct AddChip;
-
-    pub const NUM_ADD_SUB_COLS: usize = size_of::<AddCols<u8>>();
-
-    impl<F: PrimeField32> MachineAir<F> for AddChip {
-        type Record = ExecutionRecord;
-
-        type Program = Program;
-
-        fn name(&self) -> String {
-            "Add".to_string()
-        }
-
-        fn num_rows(&self, input: &Self::Record) -> Option<usize> {
-            todo!()
-        }
-
-        fn generate_trace(
-            &self,
-            input: &ExecutionRecord,
-            _: &mut ExecutionRecord,
-        ) -> RowMajorMatrix<F> {
-            todo!()
-        }
-
-        fn included(&self, shard: &Self::Record) -> bool {
-            todo!()
-        }
-
-        fn local_only(&self) -> bool {
-            todo!()
-        }
-    }
-
-    impl<F> BaseAir<F> for AddChip {
-        fn width(&self) -> usize {
-            NUM_ADD_SUB_COLS
-        }
-    }
-
-    impl<AB> Air<AB> for AddChip
-    where
-        AB: SP1AirBuilder,
-    {
-        fn eval(&self, builder: &mut AB) {
-            let main = builder.main();
-            let local = main.row_slice(0);
-            let local: &AddCols<AB::Var> = (*local).borrow();
-            AddOperation::<AB::F>::eval(builder, local.a, local.b, local.op, AB::Expr::one());
-        }
-    }
+    use crate::constraint_extraction::eval::eval_code;
 
     #[test]
-    pub fn test_add() {
+    pub fn test_chips() {
         setup_logger();
 
         let config = BabyBearPoseidon2::default();
         let machine = RiscvAir::machine(config);
         let chips = machine.chips();
-        let mut chip = AddChip;
-        let mut chip = Chip::new(chip);
-        let (code, f_ctr, _, f_constants, ef_constants) = codegen_cuda_eval(&chip);
-        println!("{:#?}", code);
 
-        // for chip in chips {
-        //     if chip.name() == "AddSub" {
-        //         let (code, f_ctr, _, f_constants, ef_constants) = codegen_cuda_eval(chip);
-        //         println!("{:#?}", code);
-        //         println!("{}", f_ctr);
-        //         println!("{:?}", f_constants);
-        //         println!("{:?}", ef_constants);
-        //         return;
-        //     }
-        // }
-        // panic!("no AddSub chip found");
+        let _ = create_dir_all("chip_constraints");
+        for chip in chips {
+            if chip.name() != "KeccakPermute" && chip.name() != "Global" {
+                println!("Chip: {}", chip.name());
+                let chip_file_path =
+                    Path::new("chip_constraints").join(format!("{}.constraints", chip.name()));
+                let mut file = File::create(&chip_file_path).ok();
+                if let Some(file) = file.as_mut() {
+                    let (code, _, _, f_constants, ef_constants) = codegen_cuda_eval(chip);
+                    let extracted_infos = eval_code(f_constants, ef_constants, code);
+                    for extracted_info in extracted_infos {
+                        if let Err(error) = writeln!(file, "{}", extracted_info) {
+                            panic!("Error: {}", error);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -3,7 +3,7 @@ use std::ops::{Add, Mul, Sub};
 
 use crate::{instruction::Instruction32, symbolic_expr_ef::SymbolicExprEF, CUDA_P3_EVAL_CODE, EF};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SymbolicVarEF {
     Empty,
     PermutationLocal(u32),
@@ -55,6 +55,17 @@ impl SymbolicVarEF {
             Self::PermutationNext(idx) => *idx,
             Self::PermutationChallenge(idx) => *idx,
             Self::CumulativeSum(idx) => *idx,
+        }
+    }
+
+    pub fn from(variant: u8, data: u32) -> Self {
+        match variant {
+            0 => Self::Empty,
+            1 => Self::PermutationLocal(data),
+            2 => Self::PermutationNext(data),
+            3 => Self::PermutationChallenge(data),
+            4 => Self::CumulativeSum(data),
+            _ => panic!("Unsupported symbolic ef-variable variant."),
         }
     }
 }

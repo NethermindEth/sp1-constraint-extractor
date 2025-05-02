@@ -17,3 +17,9 @@ perf/proof-with-pis.bin
 core_proof.bin
 program.bin
 stdin.bin
+
+# Constraints
+air/chip_constraints
+
+# Misc
+.DS_Store

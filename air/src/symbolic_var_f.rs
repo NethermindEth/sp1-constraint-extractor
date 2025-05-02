@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
+use std::panic;
 
 use crate::instruction::f_constant;
 use crate::{instruction::Instruction32, symbolic_expr_f::SymbolicExprF, CUDA_P3_EVAL_CODE, F};
@@ -94,6 +95,23 @@ impl SymbolicVarF {
             Self::IsTransition => 0,
             Self::PublicValue(idx) => *idx,
             Self::GlobalCumulativeSum(idx) => *idx,
+        }
+    }
+
+    pub fn from(variant: u8, data: u32) -> Self {
+        match variant {
+            0 => Self::Empty,
+            1 => Self::Constant(data),
+            2 => Self::PreprocessedLocal(data),
+            3 => Self::PreprocessedNext(data),
+            4 => Self::MainLocal(data),
+            5 => Self::MainNext(data),
+            6 => Self::IsFirstRow,
+            7 => Self::IsLastRow,
+            8 => Self::IsTransition,
+            9 => Self::PublicValue(data),
+            10 => Self::GlobalCumulativeSum(data),
+            _ => panic!("Unsupported symbolic f-variable variant."),
         }
     }
 }
