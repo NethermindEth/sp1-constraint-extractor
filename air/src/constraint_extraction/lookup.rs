@@ -8,7 +8,7 @@ use p3_field::extension::BinomialExtensionField;
 use p3_field::{AbstractExtensionField, AbstractField, PrimeField32};
 
 use super::extracted_constraint::ExtractedConstraint;
-use super::fexpr::fexpr_one;
+use super::fexpr::{fexpr_one, fexpr_zero};
 use super::{constraint::Constraint, efexpr::EFExpr, fexpr::FExpr};
 use crate::constraint_extraction::efexpr::efexpr_one;
 use crate::symbolic_var_ef::SymbolicVarEF;
@@ -206,6 +206,26 @@ pub fn vec_difference<T: Eq + Hash + Clone>(vec1: &[T], vec2: &[T]) -> Vec<T> {
     difference
 }
 
+///
+/// Pads lookup constraints to correct length
+///
+fn pad_coefficients(coefficients: &mut Vec<FExpr>, interaction_kind: u32) {
+    let param_count = match interaction_kind {
+        1 => 8,
+        2 => 16,
+        3 => 24,
+        5 => 6,
+        8 => 6,
+        9 => 11,
+        _ => panic!("Unsupported interaction kind: {}", interaction_kind),
+    };
+    if coefficients.len() > param_count {
+        panic!("Lookup argument with too many parameters for interaction kind {}: max {}, received {}.", interaction_kind, param_count, coefficients.len())
+    }
+    let extension: Vec<FExpr> = vec![fexpr_zero(); param_count - coefficients.len()];
+    coefficients.extend(extension);
+}
+
 /// The `process_lc_rhs` function takes as input:
 /// `lhs_lpolys` - a sequence of lookup-polynomial-coefficient sequences representing the
 ///                left-hand side of a lookup constraint substraction
@@ -285,11 +305,16 @@ fn process_lc_rhs(lhs_lpolys: Vec<Vec<FExpr>>, rhs: EFExpr) -> Vec<ExtractedCons
                 return default;
             }
             // Extend extracted lookups with current
-            if let Some(lookup_coefficients) = diff_expected_factor.first().cloned() {
-                extracted_lookups.push(ExtractedConstraint::Lookup(LookupConstraint {
-                    multiplicity,
-                    coefficients: lookup_coefficients,
-                }));
+            if let Some(mut lookup_coefficients) = diff_expected_factor.first().cloned() {
+                if let FExpr::FConst(interaction_kind) = lookup_coefficients[0] {
+                    pad_coefficients(&mut lookup_coefficients, interaction_kind.as_canonical_u32());
+                    extracted_lookups.push(ExtractedConstraint::Lookup(LookupConstraint {
+                        multiplicity,
+                        coefficients: lookup_coefficients,
+                    }));
+                } else {
+                    panic!("Unsupported: symbolic interaction kind");
+                }
             } else {
                 panic!("Impossible");
             }
