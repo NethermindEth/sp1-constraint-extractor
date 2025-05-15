@@ -103,7 +103,7 @@ pub fn process_permutation_constraints(
                                     if is_sum(&sum, false, n) {
                                         extracted_constraints.push(
                                             ExtractedConstraint::Permutation(
-                                                PermutationConstraint::FirstRow(n),
+                                                PermutationConstraint::TransitionRow(n),
                                             ),
                                         );
                                         true
